@@ -108,7 +108,7 @@
 
     ctrl.placeholder = undefined;
     ctrl.search = EMPTY_SEARCH;
-    ctrl.activeIndex = 0;
+    ctrl.activeIndex = -1; // RADIM EDIT: so none of the items is selected when we open the select for the first time
     ctrl.items = [];
     ctrl.selected = undefined;
     ctrl.open = false;
@@ -130,6 +130,10 @@
         //reset activeIndex
         if (ctrl.selected && ctrl.items.length) {
           ctrl.activeIndex = ctrl.items.indexOf(ctrl.selected);
+        }
+
+        if(!ctrl.selected) {  // RADIM EDIT: when user closes select, all focused items should become unfocused, all selected items should stay selected
+          ctrl.activeIndex = -1;
         }
       }
     }
@@ -226,12 +230,18 @@
     };
 
     ctrl.isActive = function(itemScope) {
-      return ctrl.items.indexOf(itemScope[ctrl.itemProperty]) === ctrl.activeIndex;
+      return ctrl.items.indexOf(itemScope[ctrl.itemProperty]) === ctrl.activeIndex && ctrl.activeIndex !== -1; // RADIM EDIT: now activeIndex can be also -1 if we don't want to select anything, I had to update the condition so it's not matching
+    };
+
+    // MATT EDIT - Return if the passed item scope is currently selected
+    ctrl.isSelected = function (itemScope) {
+      return angular.isDefined(ctrl.selected) && angular.equals(ctrl.selected, itemScope[ctrl.itemProperty]);
     };
 
     // When the user clicks on an item inside the dropdown
     ctrl.select = function(item) {
       ctrl.selected = item;
+      ctrl.activeIndex = -1; // MATT EDIT - We need to unhighlight selections any time they select an item
       ctrl.close();
       // Using a watch instead of $scope.ngModel.$setViewValue(item)
     };
@@ -498,6 +508,10 @@
         function onDocumentClick(e) {
           var contains = false;
 
+          if(!scope.$select.open) {  // RADIM EDIT: don't digest if the select is not open
+            return;
+          }
+
           if (window.jQuery) {
             // Firefox 3.6 does not support element.contains()
             // See Node.contains https://developer.mozilla.org/en-US/docs/Web/API/Node.contains
@@ -508,15 +522,15 @@
 
           if (!contains) {
             $select.close();
-            scope.$digest();
+            scope.$apply();   // RADIM EDIT: don't digest if the select is not open
           }
         }
 
         // See Click everywhere but here event http://stackoverflow.com/questions/12931369
-        $document.on('click', onDocumentClick);
+        $(document).on('click', onDocumentClick);   // RADIM EDIT: don't digest if the select is not open
 
         scope.$on('$destroy', function() {
-          $document.off('click', onDocumentClick);
+          $(document).off('click', onDocumentClick);   // RADIM EDIT: don't digest if the select is not open
         });
 
         // Move transcluded elements to their correct position in main template
@@ -597,7 +611,9 @@
           });
 
           scope.$watch('$select.search', function() {
-            $select.activeIndex = 0;
+			if($select.search) {
+				$select.activeIndex = 0;
+			}
             $select.refresh(attrs.refresh);
           });
 
@@ -647,12 +663,13 @@
   });
 }());
 
-angular.module("ui.select").run(["$templateCache", function($templateCache) {$templateCache.put("bootstrap/choices.tpl.html","<ul class=\"ui-select-choices ui-select-choices-content dropdown-menu\" role=\"menu\" aria-labelledby=\"dLabel\" ng-show=\"$select.items.length > 0\"><li class=\"ui-select-choices-group\"><div class=\"divider\" ng-show=\"$index > 0\"></div><div ng-show=\"$select.isGrouped\" class=\"ui-select-choices-group-label dropdown-header\">{{$group}}</div><div class=\"ui-select-choices-row\" ng-class=\"{active: $select.isActive(this)}\"><a href=\"javascript:void(0)\" class=\"ui-select-choices-row-inner\"></a></div></li></ul>");
+// MATT EDIT - These templates have been modified by Matt to add an "ng-class isSelected" expression
+angular.module("ui.select").run(["$templateCache", function($templateCache) {$templateCache.put("bootstrap/choices.tpl.html","<ul class=\"ui-select-choices ui-select-choices-content dropdown-menu\" role=\"menu\" aria-labelledby=\"dLabel\" ng-show=\"$select.items.length > 0\"><li class=\"ui-select-choices-group\"><div class=\"divider\" ng-show=\"$index > 0\"></div><div ng-show=\"$select.isGrouped\" class=\"ui-select-choices-group-label dropdown-header\">{{$group}}</div><div class=\"ui-select-choices-row\" ng-class=\"{active: $select.isActive(this), selected: $select.isSelected(this)}\"><a href=\"javascript:void(0)\" class=\"ui-select-choices-row-inner\"></a></div></li></ul>");
 $templateCache.put("bootstrap/match.tpl.html","<button type=\"button\" class=\"btn btn-default form-control ui-select-match\" tabindex=\"-1\" ng-hide=\"$select.open\" ng-disabled=\"$select.disabled\" ng-class=\"{\'btn-default-focus\':$select.focus}\" ;=\"\" ng-click=\"$select.activate()\"><span ng-hide=\"$select.selected !== undefined\" class=\"text-muted\">{{$select.placeholder}}</span> <span ng-show=\"$select.selected !== undefined\" ng-transclude=\"\"></span> <span class=\"caret\"></span></button>");
 $templateCache.put("bootstrap/select.tpl.html","<div class=\"ui-select-bootstrap dropdown\" ng-class=\"{open: $select.open}\"><div class=\"ui-select-match\"></div><input type=\"text\" autocomplete=\"off\" tabindex=\"-1\" class=\"form-control ui-select-search\" placeholder=\"{{$select.placeholder}}\" ng-model=\"$select.search\" ng-show=\"$select.open\"><div class=\"ui-select-choices\"></div></div>");
-$templateCache.put("selectize/choices.tpl.html","<div ng-show=\"$select.open\" class=\"ui-select-choices selectize-dropdown single\"><div class=\"ui-select-choices-content selectize-dropdown-content\"><div class=\"ui-select-choices-group optgroup\"><div ng-show=\"$select.isGrouped\" class=\"ui-select-choices-group-label optgroup-header\">{{$group}}</div><div class=\"ui-select-choices-row\" ng-class=\"{active: $select.isActive(this)}\"><div class=\"option ui-select-choices-row-inner\" data-selectable=\"\"></div></div></div></div></div>");
+$templateCache.put("selectize/choices.tpl.html","<div ng-show=\"$select.open\" class=\"ui-select-choices selectize-dropdown single\"><div class=\"ui-select-choices-content selectize-dropdown-content\"><div class=\"ui-select-choices-group optgroup\"><div ng-show=\"$select.isGrouped\" class=\"ui-select-choices-group-label optgroup-header\">{{$group}}</div><div class=\"ui-select-choices-row\" ng-class=\"{active: $select.isActive(this), selected: $select.isSelected(this)}\"><div class=\"option ui-select-choices-row-inner\" data-selectable=\"\"></div></div></div></div></div>");
 $templateCache.put("selectize/match.tpl.html","<div ng-hide=\"$select.open || $select.selected === undefined\" class=\"ui-select-match\" ng-transclude=\"\"></div>");
 $templateCache.put("selectize/select.tpl.html","<div class=\"selectize-control single\"><div class=\"selectize-input\" ng-class=\"{\'focus\': $select.open, \'disabled\': $select.disabled, \'selectize-focus\' : $select.focus}\" ng-click=\"$select.activate()\"><div class=\"ui-select-match\"></div><input type=\"text\" autocomplete=\"off\" tabindex=\"-1\" class=\"ui-select-search\" placeholder=\"{{$select.placeholder}}\" ng-model=\"$select.search\" ng-hide=\"$select.selected && !$select.open\" ng-disabled=\"$select.disabled\"></div><div class=\"ui-select-choices\"></div></div>");
-$templateCache.put("select2/choices.tpl.html","<ul class=\"ui-select-choices ui-select-choices-content select2-results\"><li class=\"ui-select-choices-group\" ng-class=\"{\'select2-result-with-children\': $select.isGrouped}\"><div ng-show=\"$select.isGrouped\" class=\"ui-select-choices-group-label select2-result-label\">{{$group}}</div><ul ng-class=\"{\'select2-result-sub\': $select.isGrouped, \'select2-result-single\': !$select.isGrouped}\"><li class=\"ui-select-choices-row\" ng-class=\"{\'select2-highlighted\': $select.isActive(this)}\"><div class=\"select2-result-label ui-select-choices-row-inner\"></div></li></ul></li></ul>");
-$templateCache.put("select2/match.tpl.html","<a class=\"select2-choice ui-select-match\" ng-class=\"{\'select2-default\': $select.selected === undefined}\" ng-click=\"$select.activate()\"><span ng-hide=\"$select.selected !== undefined\" class=\"select2-chosen\">{{$select.placeholder}}</span> <span ng-show=\"$select.selected !== undefined\" class=\"select2-chosen\" ng-transclude=\"\"></span> <span class=\"select2-arrow\"><b></b></span></a>");
+$templateCache.put("select2/choices.tpl.html","<ul class=\"ui-select-choices ui-select-choices-content select2-results\"><li class=\"ui-select-choices-group\" ng-class=\"{\'select2-result-with-children\': $select.isGrouped}\"><div ng-show=\"$select.isGrouped\" class=\"ui-select-choices-group-label select2-result-label\">{{$group}}</div><ul ng-class=\"{\'select2-result-sub\': $select.isGrouped, \'select2-result-single\': !$select.isGrouped}\"><li class=\"ui-select-choices-row\" ng-class=\"{\'select2-highlighted\': $select.isActive(this), selected: $select.isSelected(this)}\"><div class=\"select2-result-label ui-select-choices-row-inner\"></div></li></ul></li></ul>");
+$templateCache.put("select2/match.tpl.html","<a class=\"select2-choice ui-select-match\" ng-class=\"{\'select2-default\': $select.selected === undefined}\" ng-click=\"$select.activate()\" ng-attr-title=\"{{$select.placeholder}}\"><span ng-hide=\"$select.selected !== undefined && $select.selected !== null\" class=\"select2-chosen\">{{$select.placeholder}}</span> <span ng-show=\"$select.selected !== undefined\" class=\"select2-chosen\" ng-transclude=\"\"></span> <span class=\"select2-arrow\"><span class=\"fa fa-chevron-down\"></span></span></a>");
 $templateCache.put("select2/select.tpl.html","<div class=\"select2 select2-container\" ng-class=\"{\'select2-container-active select2-dropdown-open\': $select.open,\n                \'select2-container-disabled\': $select.disabled,\n                \'select2-container-active\': $select.focus }\"><div class=\"ui-select-match\"></div><div class=\"select2-drop select2-with-searchbox select2-drop-active\" ng-class=\"{\'select2-display-none\': !$select.open}\"><div class=\"select2-search\"><input type=\"text\" autocomplete=\"off\" autocorrect=\"off\" autocapitalize=\"off\" spellcheck=\"false\" class=\"ui-select-search select2-input\" ng-model=\"$select.search\"></div><div class=\"ui-select-choices\"></div></div></div>");}]);
