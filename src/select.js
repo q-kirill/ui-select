@@ -1,3 +1,11 @@
+/*!
+ * ui-select
+ * http://github.com/angular-ui/ui-select
+ * Version: 0.5.0 - 2014-07-30T04:47:33.132Z
+ * License: MIT
+ */
+
+
 (function () {
   "use strict";
 
@@ -100,7 +108,7 @@
 
     ctrl.placeholder = undefined;
     ctrl.search = EMPTY_SEARCH;
-    ctrl.activeIndex = 0;
+    ctrl.activeIndex = -1; // RADIM EDIT: so none of the items is selected when we open the select for the first time
     ctrl.items = [];
     ctrl.selected = undefined;
     ctrl.open = false;
@@ -123,6 +131,10 @@
         if (ctrl.selected && ctrl.items.length) {
           ctrl.activeIndex = ctrl.items.indexOf(ctrl.selected);
         }
+
+        if(!ctrl.selected) {  // RADIM EDIT: when user closes select, all focused items should become unfocused, all selected items should stay selected
+          ctrl.activeIndex = -1;
+        }
       }
     }
 
@@ -132,10 +144,34 @@
         _resetSearchInput();
         ctrl.open = true;
 
+        // EDITED BY KIRILL START
+        var scrollElement = $element.closest('.nano-content'),
+          dropdownElement = $element.find('.select2-drop');
+
+        if (scrollElement.length) {
+          dropdownElement.addClass('invisible');
+        }
+
+        // EDITED BY KIRILL END
+
         // Give it time to appear before focus
         $timeout(function() {
           ctrl.search = initSearchValue || ctrl.search;
           _searchInput[0].focus();
+
+          // EDITED BY KIRILL START
+          if (scrollElement.length && dropdownElement.length) {
+            var height = dropdownElement.outerHeight(),
+              dropdownElementOffset = dropdownElement.offset(),
+              scrollElementOffset = scrollElement.offset(),
+              scrollElementHeight = scrollElement.outerHeight();
+
+            if(dropdownElementOffset.top - scrollElementOffset.top + height > scrollElementHeight) {
+              dropdownElement.addClass('above-input');
+            }
+            dropdownElement.removeClass('invisible');
+          }
+          // EDITED BY KIRILL END
         });
       }
     };
@@ -218,12 +254,18 @@
     };
 
     ctrl.isActive = function(itemScope) {
-      return ctrl.items.indexOf(itemScope[ctrl.itemProperty]) === ctrl.activeIndex;
+      return ctrl.items.indexOf(itemScope[ctrl.itemProperty]) === ctrl.activeIndex && ctrl.activeIndex !== -1; // RADIM EDIT: now activeIndex can be also -1 if we don't want to select anything, I had to update the condition so it's not matching
+    };
+
+    // MATT EDIT - Return if the passed item scope is currently selected
+    ctrl.isSelected = function (itemScope) {
+      return angular.isDefined(ctrl.selected) && angular.equals(ctrl.selected, itemScope[ctrl.itemProperty]);
     };
 
     // When the user clicks on an item inside the dropdown
     ctrl.select = function(item) {
       ctrl.selected = item;
+      ctrl.activeIndex = -1; // MATT EDIT - We need to unhighlight selections any time they select an item
       ctrl.close();
       // Using a watch instead of $scope.ngModel.$setViewValue(item)
     };
@@ -234,6 +276,11 @@
         _resetSearchInput();
         ctrl.open = false;
         ctrl.focusser[0].focus();
+
+        // EDITED BY KIRILL START
+        var dropdownElement = $element.find('.select2-drop');
+        dropdownElement.removeClass('above-input');
+        // EDITED BY KIRILL END
       }
     };
 
@@ -490,6 +537,10 @@
         function onDocumentClick(e) {
           var contains = false;
 
+          if(!scope.$select.open) {  // RADIM EDIT: don't digest if the select is not open
+            return;
+          }
+
           if (window.jQuery) {
             // Firefox 3.6 does not support element.contains()
             // See Node.contains https://developer.mozilla.org/en-US/docs/Web/API/Node.contains
@@ -500,15 +551,15 @@
 
           if (!contains) {
             $select.close();
-            scope.$digest();
+            scope.$apply();   // RADIM EDIT: don't digest if the select is not open
           }
         }
 
         // See Click everywhere but here event http://stackoverflow.com/questions/12931369
-        $document.on('click', onDocumentClick);
+        $(document).on('click', onDocumentClick);   // RADIM EDIT: don't digest if the select is not open
 
         scope.$on('$destroy', function() {
-          $document.off('click', onDocumentClick);
+          $(document).off('click', onDocumentClick);   // RADIM EDIT: don't digest if the select is not open
         });
 
         // Move transcluded elements to their correct position in main template
@@ -589,7 +640,9 @@
           });
 
           scope.$watch('$select.search', function() {
-            $select.activeIndex = 0;
+      if($select.search) {
+        $select.activeIndex = 0;
+      }
             $select.refresh(attrs.refresh);
           });
 
