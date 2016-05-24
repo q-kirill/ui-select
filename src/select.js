@@ -141,6 +141,10 @@
     // When the user clicks on ui-select, displays the dropdown list
     ctrl.activate = function(initSearchValue) {
       if (!ctrl.disabled) {
+        if (ctrl.open) {
+          ctrl.close();
+          return;
+        }
         _resetSearchInput();
         ctrl.open = true;
 
@@ -167,7 +171,7 @@
               scrollElementHeight = scrollElement.outerHeight();
 
             if(dropdownElementOffset.top - scrollElementOffset.top + height > scrollElementHeight) {
-              dropdownElement.addClass('above-input');
+              $element.addClass('above-input');
             }
             dropdownElement.removeClass('invisible');
           }
@@ -278,8 +282,7 @@
         ctrl.focusser[0].focus();
 
         // EDITED BY KIRILL START
-        var dropdownElement = $element.find('.select2-drop');
-        dropdownElement.removeClass('above-input');
+        $element.removeClass('above-input');
         // EDITED BY KIRILL END
       }
     };
