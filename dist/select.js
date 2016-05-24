@@ -1,7 +1,7 @@
 /*!
  * ui-select
  * http://github.com/angular-ui/ui-select
- * Version: 0.5.0 - 2016-05-24T09:44:49.810Z
+ * Version: 0.5.0 - 2016-05-24T10:08:23.811Z
  * License: MIT
  */
 
@@ -168,6 +168,7 @@
 
         // Give it time to appear before focus
         $timeout(function() {
+          dropdownElement.removeClass('select2-display-none');
           ctrl.search = initSearchValue || ctrl.search;
           _searchInput[0].focus();
 
@@ -290,7 +291,9 @@
         ctrl.focusser[0].focus();
 
         // EDITED BY KIRILL START
-        $element.removeClass('above-input');
+        $timeout(function() {
+          $element.removeClass('above-input');
+        });
         // EDITED BY KIRILL END
       }
     };

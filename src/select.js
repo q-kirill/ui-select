@@ -160,6 +160,7 @@
 
         // Give it time to appear before focus
         $timeout(function() {
+          dropdownElement.removeClass('select2-display-none');
           ctrl.search = initSearchValue || ctrl.search;
           _searchInput[0].focus();
 
@@ -282,7 +283,9 @@
         ctrl.focusser[0].focus();
 
         // EDITED BY KIRILL START
-        $element.removeClass('above-input');
+        $timeout(function() {
+          $element.removeClass('above-input');
+        });
         // EDITED BY KIRILL END
       }
     };
