@@ -1,7 +1,7 @@
 /*!
  * ui-select
  * http://github.com/angular-ui/ui-select
- * Version: 0.5.0 - 2016-05-24T10:08:23.811Z
+ * Version: 0.5.0 - 2016-12-14T14:19:23.011Z
  * License: MIT
  */
 
@@ -642,6 +642,7 @@
 
           choices.attr('ng-repeat', RepeatParser.getNgRepeatExpression($select.parserResult.itemName, '$select.items', $select.parserResult.trackByExp, groupByExp))
               .attr('ng-mouseenter', '$select.setActiveItem('+$select.parserResult.itemName +')')
+              .attr('ng-hide', attrs.ngHide) // EDITED BY KIRILL, proxy ngHide directive to ui-select options
               .attr('ng-click', '$select.select(' + $select.parserResult.itemName + ')');
 
           transcludeFn(function(clone) {

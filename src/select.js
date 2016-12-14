@@ -634,6 +634,7 @@
 
           choices.attr('ng-repeat', RepeatParser.getNgRepeatExpression($select.parserResult.itemName, '$select.items', $select.parserResult.trackByExp, groupByExp))
               .attr('ng-mouseenter', '$select.setActiveItem('+$select.parserResult.itemName +')')
+              .attr('ng-hide', attrs.ngHide) // EDITED BY KIRILL, proxy ngHide directive to ui-select options
               .attr('ng-click', '$select.select(' + $select.parserResult.itemName + ')');
 
           transcludeFn(function(clone) {
