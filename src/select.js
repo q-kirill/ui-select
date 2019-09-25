@@ -393,6 +393,27 @@
         var $select = ctrls[0];
         var ngModel = ctrls[1];
 
+        // KIRILL EDIT - getNested function that tries to access
+        // nested property (e.g. [person.fullName.lastName])
+        // theObject - source object
+        // path - property path (ex. person.fullName.lastName)
+        function getNested(theObject, path) {
+          var separator = '.';
+          try {
+            return path
+              .replace('[', separator).replace(']', '')
+              .split(separator)
+              .reduce(
+                function (obj, property) {
+                  return obj[property];
+                }, theObject
+              );
+
+          } catch (err) {
+            return undefined;
+          }
+        }
+
         //From view --> model
         ngModel.$parsers.unshift(function (inputValue) {
           var locals = {};
@@ -404,7 +425,7 @@
         //From model --> view
         ngModel.$formatters.unshift(function (inputValue) {
           var match = $select.parserResult.source.match(/^\s*([\S]+).*$/);
-          var data = scope[match[1]];
+          var data = getNested(scope, match[1]);
           if (data){
             for (var i = data.length - 1; i >= 0; i--) {
               var locals = {};
